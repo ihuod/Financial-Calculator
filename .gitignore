@@ -1,0 +1,23 @@
+*.DS_Store
+*.xcuserdatad
+*.xcworkspace
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace
+*.xcodeproj/xcuserdata/
+
+# Игнорировать папки с временными файлами
+DerivedData/
+build/
+
+# Игнорировать пользовательские настройки
+*.plist
+
+# Игнорировать файлы кэша
+*.swp
+*.lock
+*.log
+
+# Игнорировать сгенерированные папки и файлы
+*.app
+*.ipa
+*.dSYM
