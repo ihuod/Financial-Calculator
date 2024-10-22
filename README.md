@@ -26,7 +26,7 @@ Clone the repository:
 
 **Run** <br>
 
-Run .app file from tth latest release
+Run calculator.app file from the latest release.
 
 **Usage**
 
