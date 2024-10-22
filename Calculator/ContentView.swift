@@ -72,8 +72,8 @@ struct ContentView: View {
             }
             
             HStack {
-                NumberTextField(number: $value1, placeholder: "Number 1", placeholderColor: .gray)
-                NumberTextField(number: $value2, placeholder: "Number 2", placeholderColor: .gray)
+                NumberTextField(number: $value1, placeholder: "Number 1")
+                NumberTextField(number: $value2, placeholder: "Number 2")
             }
 
             HStack {
@@ -84,6 +84,8 @@ struct ContentView: View {
                         .padding()
                         .foregroundColor(Color.primary)
                         .cornerRadius(8)
+                        .bold()
+                        .font(.title2)
                 }
                 
                 Spacer(minLength: 5)
@@ -93,6 +95,9 @@ struct ContentView: View {
                         .padding()
                         .foregroundColor(Color.primary)
                         .cornerRadius(8)
+                        .bold()
+                        .font(.title2)
+                        
                 }
                 
                 Spacer()
@@ -132,6 +137,7 @@ struct ContentView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .foregroundColor(Color.primary)
         .frame(width: 600, height: 600)
+        .frame(maxWidth: 600)
         .border(Color.gray, width: 1)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -175,6 +181,7 @@ struct ContentView: View {
         let formatter = NumberFormatter()
         formatter.locale = Locale.current
         formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 20
         
         let groupingSeparator = formatter.groupingSeparator ?? ","
         
@@ -200,14 +207,19 @@ struct ContentView: View {
         let resultValue = operation(num1, num2)
         
         if abs(resultValue) > 1_000_000_000_000.000000 {
-            result = ""
-            errorMessage = "Result value overflow!"
-        } else {
-            result = formatter.string(from: NSDecimalNumber(decimal: resultValue)) ?? "\(resultValue)"
+                result = ""
+                errorMessage = "Result value overflow!"
+            } else {
+                if let formattedResult = formatter.string(from: resultValue as NSNumber) {
+                    result = formattedResult
+                } else {
+                    result = "\(resultValue)"
+                }
         }
         
         if groupingSeparator == "\u{00A0}" {
             infoMessage = "You can use basic space!"
+            
         }
     }
     
@@ -241,16 +253,19 @@ struct NumberTextField: View {
     var placeholder: String
     var placeholderColor: Color = .gray
     
+    @Environment(\.colorScheme) var colorScheme
+
     var body: some View {
         TextField(placeholder, text: $number)
             .padding(10)
             .textFieldStyle(.roundedBorder)
-            .background(Color.white)
-            .foregroundColor(.black)
+            .background(colorScheme == .dark ? Color.black.opacity(0.7) : Color.white)
+            .foregroundColor(colorScheme == .dark ? Color.white : Color.black)
             .cornerRadius(8)
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.clear, lineWidth: 0))
             .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
             .padding(.horizontal, 12)
     }
 }
+
 
