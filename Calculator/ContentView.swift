@@ -3,24 +3,21 @@ import SwiftUI
 struct ContentView: View {
     @State private var value1: String = ""
     @State private var value2: String = ""
-    @State private var result: String = ""
+    @State private var result: Decimal = 0
     @State private var errorMessage: String = ""
     @State private var isInfoVisible: Bool = false
     @State private var infoMessage: String = ""
     
     init() {
-        let formatter = NumberFormatter()
-        formatter.locale = Locale.current
-        let groupingSeparator = formatter.groupingSeparator ?? ","
-        
-        if groupingSeparator == "\u{00A0}" {
-            _infoMessage = State(initialValue: "You can use basic space!")
-        }
+        _infoMessage = State(initialValue: "You can use basic space as a grouping separator!")
+    }
+    
+    var resultOrEmpty: String {
+        errorMessage.isEmpty ? formattedResult(result) : ""
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-
             HStack {
                 Spacer()
                 
@@ -35,7 +32,7 @@ struct ContentView: View {
                 
                 Spacer()
             }
-                       
+            
             if isInfoVisible {
                 VStack(spacing: 10) {
                     HStack {
@@ -43,25 +40,25 @@ struct ContentView: View {
                         Text("Довгий Александр Сергеевич").bold()
                         Spacer()
                     }
-        
+                    
                     Divider()
-                        
+                    
                     HStack {
                         Spacer()
                         Text("Курс: 3")
                         Spacer()
                     }
-                                
+                    
                     Divider()
-                                
+                    
                     HStack {
                         Spacer()
                         Text("Группа: 11")
                         Spacer()
                     }
-                                
+                    
                     Divider()
-                                
+                    
                     HStack {
                         Spacer()
                         Text("Год: 2024")
@@ -97,7 +94,6 @@ struct ContentView: View {
                         .cornerRadius(8)
                         .bold()
                         .font(.title2)
-                        
                 }
                 
                 Spacer()
@@ -106,7 +102,7 @@ struct ContentView: View {
             HStack {
                 Spacer()
                 
-                Text("Result: \(result)")
+                Text("Result: \(resultOrEmpty)")
                     .bold()
                     .contextMenu {
                         Button(action: copyResult) {
@@ -128,9 +124,9 @@ struct ContentView: View {
             
             if !infoMessage.isEmpty {
                 Text(infoMessage)
-                .foregroundColor(.red)
-                .font(.caption)
-                .padding(.top, 10)
+                    .foregroundColor(.red)
+                    .font(.caption)
+                    .padding(.top, 10)
             }
         }
         .padding()
@@ -147,25 +143,24 @@ struct ContentView: View {
                 return event
             }
         }
-
     }
     
     private func localeInfoView() -> some View {
-            let formatter = NumberFormatter()
-            formatter.locale = Locale.current
-            let decimalSeparator = formatter.decimalSeparator ?? "."
-            let groupingSeparator = formatter.groupingSeparator ?? ","
-            let groupingSeparatorText = (groupingSeparator == " " || groupingSeparator == "\u{00A0}")  ? "\t[space]" : ""
-            
-            let decimalCode = decimalSeparator.unicodeScalars.first?.value ?? 0
-            let groupingCode = groupingSeparator.unicodeScalars.first?.value ?? 0
+        let formatter = NumberFormatter()
+        formatter.locale = Locale.current
+        let decimalSeparator = formatter.decimalSeparator ?? "."
+        let groupingSeparator = formatter.groupingSeparator ?? ","
+        let groupingSeparatorText = (groupingSeparator == " " || groupingSeparator == "\u{00A0}") ? "[space]" : ""
         
-            return VStack(alignment: .leading, spacing: 5) {
-                Text("Current locale:\t\(Locale.current.identifier)")
-                Text("Decimal separator:\t\"\(decimalSeparator)\" \t(U+\(String(format: "%04X", decimalCode)))")
-                Text("Digit groups separator:\t\t\"\(groupingSeparator)\" \(groupingSeparatorText) \t(U+\(String(format: "%04X", groupingCode)))")
-            }
+        let decimalCode = decimalSeparator.unicodeScalars.first?.value ?? 0
+        let groupingCode = groupingSeparator.unicodeScalars.first?.value ?? 0
+        
+        return VStack(alignment: .leading, spacing: 5) {
+            Text("Current locale:\t\(Locale.current.identifier)")
+            Text("Decimal separator:\t\"\(decimalSeparator)\" \t(U+\(String(format: "%04X", decimalCode)))")
+            Text("Digit groups separator:\t\t\"\(groupingSeparator)\"\t \(groupingSeparatorText) \t(U+\(String(format: "%04X", groupingCode)))")
         }
+    }
     
     private func calculateSum() {
         performCalculation(operation: +)
@@ -177,74 +172,109 @@ struct ContentView: View {
     
     private func performCalculation(operation: (Decimal, Decimal) -> Decimal) {
         errorMessage = ""
-        
+
         let formatter = NumberFormatter()
         formatter.locale = Locale.current
         formatter.numberStyle = .decimal
         formatter.maximumFractionDigits = 20
         
         let groupingSeparator = formatter.groupingSeparator ?? ","
-        
-        if !isValidInput(value1, formatter: formatter) || !isValidInput(value2, formatter: formatter) {
-            result = ""
+        let decimalSeparator = formatter.decimalSeparator ?? "."
+
+        guard isValidFormat(value1, groupingSeparator: groupingSeparator, decimalSeparator: decimalSeparator),
+              isValidFormat(value2, groupingSeparator: groupingSeparator, decimalSeparator: decimalSeparator) else {
+            result = 0
             errorMessage = "Invalid input format!"
             return
         }
-        
-        guard let num1 = formatter.number(from: value1)?.decimalValue,
-              let num2 = formatter.number(from: value2)?.decimalValue else {
-            result = ""
-            errorMessage = "Invalid input!"
+
+        guard let num1 = normalizedDecimal(from: value1, formatter: formatter),
+              let num2 = normalizedDecimal(from: value2, formatter: formatter) else {
+            result = 0
+            errorMessage = "Error occured!"
             return
         }
         
         if abs(num1) > 1_000_000_000_000.000000 || abs(num2) > 1_000_000_000_000.000000 {
-            result = ""
+            result = 0
             errorMessage = "Input value overflow!"
             return
         }
         
+        // print("num1: \(num1), num2: \(num2)") // Debug print
+        
         let resultValue = operation(num1, num2)
         
         if abs(resultValue) > 1_000_000_000_000.000000 {
-                result = ""
-                errorMessage = "Result value overflow!"
-            } else {
-                if let formattedResult = formatter.string(from: resultValue as NSNumber) {
-                    result = formattedResult
-                } else {
-                    result = "\(resultValue)"
-                }
+            result = 0
+            errorMessage = "Result value overflow!"
+        } else {
+            result = resultValue
         }
         
-        if groupingSeparator == "\u{00A0}" {
-            infoMessage = "You can use basic space!"
-            
-        }
+        // print("Result: \(result)") // Debug print
     }
     
-    private func isValidInput(_ input: String, formatter: NumberFormatter) -> Bool {
-        let normalizedInput = input.replacingOccurrences(of: "\u{00A0}", with: " ")
-
-        let decimalSeparator = formatter.decimalSeparator ?? "."
+    private func normalizedDecimal(from input: String, formatter: NumberFormatter) -> Decimal? {
         let groupingSeparator = formatter.groupingSeparator ?? ","
+        let decimalSeparator = formatter.decimalSeparator ?? "."
+        
+        let normalizedInput = input
+            .replacingOccurrences(of: groupingSeparator, with: "")
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: decimalSeparator, with: ".")
 
-        let regexPattern: String
-        if groupingSeparator == "\u{00A0}" {
-            regexPattern = "^[0-9\(groupingSeparator) ]*(\(decimalSeparator)[0-9]+)?$"
-        } else {
-            regexPattern = "^[0-9\(groupingSeparator)]*(\(decimalSeparator)[0-9]+)?$"
-        }
+        return Decimal(string: normalizedInput)
+    }
 
+    private func isValidFormat(_ input: String, groupingSeparator: String, decimalSeparator: String) -> Bool {
+        let regexPattern = "^[0-9]{1,3}([ \(groupingSeparator)]?[0-9]{3})*(\(decimalSeparator)[0-9]+)?$"
         let regex = try? NSRegularExpression(pattern: regexPattern)
-        let range = NSRange(location: 0, length: normalizedInput.utf16.count)
-        return regex?.firstMatch(in: normalizedInput, options: [], range: range) != nil
+
+        let range = NSRange(location: 0, length: input.utf16.count)
+        if let match = regex?.firstMatch(in: input, options: [], range: range) {
+            return match.range == range
+        }
+        
+        return false
     }
     
     private func copyResult() {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(result, forType: .string)
+        pasteboard.setString(formattedResult(result), forType: .string)
+    }
+
+    private func formattedResult(_ number: Decimal) -> String {
+        let nsDecimalNumber = NSDecimalNumber(decimal: number)
+        let numberString = nsDecimalNumber.stringValue
+        
+        let formatter = NumberFormatter()
+        let groupingSeparator = formatter.groupingSeparator ?? ","
+        let decimalSeparator = formatter.decimalSeparator ?? "."
+
+        let components = numberString.split(separator: ".", omittingEmptySubsequences: false)
+        guard let integerPart = components.first else { return numberString }
+        let fractionalPart = components.count > 1 ? String(components[1]) : ""
+
+        let integerPartWithGrouping = addGroupingSeparators(to: String(integerPart), groupingSeparator: groupingSeparator)
+        
+        return fractionalPart.isEmpty ? integerPartWithGrouping : "\(integerPartWithGrouping)\(decimalSeparator)\(fractionalPart)"
+    }
+    
+    private func addGroupingSeparators(to integerPart: String, groupingSeparator: String) -> String {
+        var result = ""
+        var counter = 0
+
+        for char in integerPart.reversed() {
+            if counter > 0 && counter % 3 == 0 {
+                result.append(groupingSeparator)
+            }
+            result.append(char)
+            counter += 1
+        }
+
+        return String(result.reversed())
     }
 }
 
@@ -252,7 +282,6 @@ struct NumberTextField: View {
     @Binding var number: String
     var placeholder: String
     var placeholderColor: Color = .gray
-    
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -267,5 +296,3 @@ struct NumberTextField: View {
             .padding(.horizontal, 12)
     }
 }
-
-
