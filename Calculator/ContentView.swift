@@ -96,6 +96,28 @@ struct ContentView: View {
                         .font(.title2)
                 }
                 
+                Spacer(minLength: 5)
+                
+                Button(action: calculateProduct) {
+                    Text("×")
+                        .padding()
+                        .foregroundColor(Color.primary)
+                        .cornerRadius(8)
+                        .bold()
+                        .font(.title2)
+                }
+                
+                Spacer(minLength: 5)
+                
+                Button(action: calculateQuotient) {
+                    Text("÷")
+                        .padding()
+                        .foregroundColor(Color.primary)
+                        .cornerRadius(8)
+                        .bold()
+                        .font(.title2)
+                }
+                
                 Spacer()
             }
             
@@ -168,6 +190,19 @@ struct ContentView: View {
     
     private func calculateDifference() {
         performCalculation(operation: -)
+    }
+    
+    private func calculateProduct() {
+        performCalculation(operation: *)
+    }
+    
+    private func calculateQuotient() {
+        if let decimalValue2 = Decimal(string: value2.replacingOccurrences(of: ",", with: ".")), decimalValue2 == 0 {
+            result = 0
+            errorMessage = "Cannot divide by zero!"
+            return
+        }
+        performCalculation(operation: /)
     }
     
     private func performCalculation(operation: (Decimal, Decimal) -> Decimal) {
@@ -246,12 +281,12 @@ struct ContentView: View {
     }
 
     private func formattedResult(_ number: Decimal) -> String {
-        let nsDecimalNumber = NSDecimalNumber(decimal: number)
+        let roundedValue = number.rounded(6, .plain)
+        let nsDecimalNumber = NSDecimalNumber(decimal: roundedValue)
         let numberString = nsDecimalNumber.stringValue
         
-        let formatter = NumberFormatter()
-        let groupingSeparator = formatter.groupingSeparator ?? ","
-        let decimalSeparator = formatter.decimalSeparator ?? "."
+        let groupingSeparator = " "
+        let decimalSeparator = "."
 
         let components = numberString.split(separator: ".", omittingEmptySubsequences: false)
         guard let integerPart = components.first else { return numberString }
@@ -275,6 +310,20 @@ struct ContentView: View {
         }
 
         return String(result.reversed())
+    }
+}
+
+extension Decimal {
+    mutating func round(_ scale: Int, _ roundingMode: NSDecimalNumber.RoundingMode) {
+        var localCopy = self
+        NSDecimalRound(&self, &localCopy, scale, roundingMode)
+    }
+
+    func rounded(_ scale: Int, _ roundingMode: NSDecimalNumber.RoundingMode) -> Decimal {
+        var result = Decimal()
+        var localCopy = self
+        NSDecimalRound(&result, &localCopy, scale, roundingMode)
+        return result
     }
 }
 
